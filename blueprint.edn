@@ -1,0 +1,12 @@
+{:itonami.blueprint/id "cloud-itonami-1010"
+ :itonami.blueprint/name "Community Meat Processing"
+ :itonami.blueprint/isic-rev5 "1010"
+ :itonami.blueprint/domain :food/meat-processing
+ :itonami.blueprint/license "AGPL-3.0-or-later"
+ :itonami.blueprint/social-impact [:food-security :food-safety :fair-labor]
+ :itonami.blueprint/governor :meat-processing-governor
+ :itonami.blueprint/robotics true
+ :itonami.blueprint/required-technologies [:robotics :identity :forms :dmn :bpmn :audit-ledger :cae]
+ :itonami.blueprint/optional-technologies [:optimization :telemetry]
+ :itonami.blueprint/status :public-oss
+ :itonami.blueprint/maturity :blueprint}
