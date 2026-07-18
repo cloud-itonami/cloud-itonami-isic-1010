@@ -30,6 +30,10 @@
     5. Sanitation score insufficient (plant hygiene not verified)
     6. Metal detector did not pass (foreign material risk)
     7. Contamination flag unresolved (open food-safety concern)
+    8. `:coordinate-shipment` carrying an OPTIONAL `:handoff` record
+       (downstream to e.g. isic-1075) that IS present but malformed --
+       absence of `:handoff` is never itself a violation, only a
+       present-but-malformed one is
 
   Soft gates (always escalate for human):
     - Low confidence
@@ -169,6 +173,23 @@
       [{:rule :already-shipment-finalized
         :detail (str subject " は既に出荷確定済み")}])))
 
+(defn- handoff-malformed-violations
+  "HARD, but ONLY when a `:handoff` map is actually present under the
+  proposal's `:value`: verify (via `facts/handoff-record-well-formed?`)
+  that it carries every required field with a plausible value. A
+  malformed handoff would actively mislead the downstream receiving
+  actor (e.g. isic-1075), so if one is attached at all it must be
+  well-formed -- but its ABSENCE is never itself a violation, since
+  attaching a `:handoff` to this actor's shipment proposal is entirely
+  optional (see `meatprocessing.facts`'s \"Downstream Cross-Actor
+  Handoff\" section)."
+  [{:keys [op]} proposal]
+  (when (= op :coordinate-shipment)
+    (let [handoff (get-in proposal [:value :handoff])]
+      (when (and (some? handoff) (not (facts/handoff-record-well-formed? handoff)))
+        [{:rule :handoff-malformed
+          :detail "coordinate-shipment提案に添付された:handoffレコードが必須フィールド(id/source-actor/batch-id/product-type-id/quantity-kg/dispatched-at-iso)を欠く、または数量が正の数でない"}]))))
+
 (defn check
   "Censors a MeatProcessingAdvisor proposal against the Governor rules.
   Returns {:ok? bool :violations [..] :confidence c :escalate? bool
@@ -183,7 +204,8 @@
                            (metal-detector-failed-violations request st)
                            (contamination-flag-unresolved-violations request st)
                            (already-processed-violations request st)
-                           (already-shipment-finalized-violations request st)))
+                           (already-shipment-finalized-violations request st)
+                           (handoff-malformed-violations request proposal)))
         conf (:confidence proposal 0.0)
         low? (< conf confidence-floor)
         stakes? (boolean (high-stakes (:stake proposal)))
