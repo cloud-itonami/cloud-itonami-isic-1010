@@ -67,3 +67,29 @@
       (is (= 2.0 (:cold-chain-temp-min-c p)))
       (is (= 5.0 (:cold-chain-temp-max-c p)))
       (is (= 48 (:holding-time-max-hours p))))))
+
+;; ───────── Downstream Cross-Actor Handoff (optional, isic-1010 -> isic-1075) ─────────
+
+(def ^:private well-formed-handoff
+  {:handoff/id "h-1"
+   :handoff/source-actor "cloud-itonami-isic-1010"
+   :handoff/batch-id "batch-1"
+   :handoff/product-type-id "fresh-poultry"
+   :handoff/quantity-kg 500.0
+   :handoff/dispatched-at-iso "2026-07-17T00:00:00Z"})
+
+(deftest handoff-record-well-formed-test
+  (testing "complete handoff passes"
+    (is (true? (facts/handoff-record-well-formed? well-formed-handoff))))
+
+  (testing "missing :handoff/quantity-kg fails"
+    (is (false? (facts/handoff-record-well-formed? (dissoc well-formed-handoff :handoff/quantity-kg)))))
+
+  (testing "non-positive quantity fails"
+    (is (false? (facts/handoff-record-well-formed? (assoc well-formed-handoff :handoff/quantity-kg 0)))))
+
+  (testing "blank batch-id fails"
+    (is (false? (facts/handoff-record-well-formed? (assoc well-formed-handoff :handoff/batch-id "")))))
+
+  (testing "nil handoff fails"
+    (is (false? (facts/handoff-record-well-formed? nil)))))
