@@ -1,4 +1,4 @@
-{:itonami.blueprint/id "cloud-itonami-1010"
+{:itonami.blueprint/id "cloud-itonami-isic-1010"
  :itonami.blueprint/name "Community Meat Processing"
  :itonami.blueprint/isic-rev5 "1010"
  :itonami.blueprint/domain :food/meat-processing

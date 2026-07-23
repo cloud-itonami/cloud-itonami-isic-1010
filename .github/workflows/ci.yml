@@ -1,0 +1,35 @@
+name: CI
+
+# operation.cljc's langgraph-clj StateGraph integration is deferred (see
+# its own ns docstring) -- the current test/lint suite has no dependency
+# on langgraph/langchain at all, so a plain single-repo checkout resolves
+# the classpath, no sibling checkout needed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with: { cli: latest }
+      - name: clj-kondo (errors fail the build)
+        run: clojure -M:lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with: { cli: latest }
+      - name: test
+        run: clojure -M:test
