@@ -68,6 +68,59 @@
       (is (= 5.0 (:cold-chain-temp-max-c p)))
       (is (= 48 (:holding-time-max-hours p))))))
 
+;; ───────── Verified primary-source citations (2026-07-25) ─────────
+
+(deftest every-jurisdiction-is-cited
+  (testing "all three jurisdictions carry a legal-basis and a fetchable provenance URL"
+    (doseq [id (keys facts/jurisdictions)]
+      (is (true? (facts/cited? id))
+          (str id " must rest on a verified primary source"))))
+
+  (testing "unknown jurisdiction is neither cited nor invented"
+    (is (nil? (facts/spec-basis "XX")))
+    (is (false? (facts/cited? "XX")))))
+
+(deftest citation-coverage-is-honest
+  (testing "coverage counts cited jurisdictions, and reports unknowns as missing"
+    (let [c (facts/citation-coverage)]
+      (is (= 3 (:known c)))
+      (is (= 3 (:cited c)))
+      (is (= ["EU" "JP" "US"] (:cited-jurisdictions c)))
+      (is (= [] (:uncited-jurisdictions c)))))
+
+  (testing "an unknown jurisdiction is surfaced, not silently dropped"
+    (let [c (facts/citation-coverage ["US" "XX"])]
+      (is (= 2 (:requested c)))
+      (is (= 1 (:known c)))
+      (is (= ["XX"] (:unknown-jurisdictions c))))))
+
+(deftest jp-storage-limit-matches-the-kokuji
+  (testing "保存基準 3(1) is 4゜以下 -- the earlier unsourced 5.0 was looser than the 告示"
+    (let [j (facts/jurisdiction-by-id "JP")]
+      (is (= 4.0 (:cold-chain-max-temp-c j)))
+      (is (= 4.0 (-> j :statutory-limits :storage-max-temp-c)))
+      (is (= -15.0 (-> j :statutory-limits :frozen-storage-max-temp-c)))
+      (is (= 10.0 (-> j :statutory-limits :processing-surface-max-temp-c))))))
+
+(deftest eu-operative-limit-is-not-loosened-to-the-carcase-ceiling
+  (testing "Annex III allows 7.0 degC for carcases, but the operative gate stays at the 3.0 offal ceiling"
+    (let [j (facts/jurisdiction-by-id "EU")
+          limits (:statutory-limits j)]
+      (is (= 7.0 (:carcase-max-temp-c limits)))
+      (is (= 3.0 (:offal-max-temp-c limits)))
+      (is (= 4.0 (:poultry-max-temp-c limits)))
+      (is (= 3.0 (:cold-chain-max-temp-c j))
+          "research must never relax a food-safety gate")
+      (is (<= (:cold-chain-max-temp-c j) (:carcase-max-temp-c limits))))))
+
+(deftest us-chilling-rule-is-performance-based
+  (testing "9 CFR 381.66(b)(1)(i) sets no flat numeric carcass ceiling"
+    (let [limits (:statutory-limits (facts/jurisdiction-by-id "US"))]
+      (is (= :performance-based-no-pathogen-outgrowth (:chilling-rule limits)))
+      (is (= 36.0 (:fresh-frozen-holding-max-temp-f limits)))
+      (is (= 0.0 (:frozen-core-target-temp-f limits)))
+      (is (= -10.0 (:warm-packaged-plate-freezer-max-temp-f limits))))))
+
 ;; ───────── Downstream Cross-Actor Handoff (optional, isic-1010 -> isic-1075) ─────────
 
 (def ^:private well-formed-handoff

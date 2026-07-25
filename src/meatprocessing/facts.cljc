@@ -3,17 +3,88 @@
   processing, cold-chain integrity, holding-time compliance, and food-safety
   evidence. This namespace contains pure lookup functions for regulatory
   compliance checks -- the Governor calls these to validate proposals against
-  jurisdiction requirements."
-  (:require [clojure.string :as str]))
+  jurisdiction requirements.
+
+  CITATION PROVENANCE (2026-07-25). Every `:legal-basis` / `:provenance` /
+  `:statutory-limits` value below was read out of a directly-fetched primary
+  source in this session -- not recalled, not inferred from a secondary
+  summary:
+
+    - EU: Regulation (EC) No 853/2004, Annex III, fetched as the official
+      consolidated HTML from EUR-Lex (CELEX:32004R0853) and re-checked against
+      the raw markup, not against a summary. The regulation states BOTH
+      ungulate figures in ONE clause, which appears twice: post-mortem
+      chilling (Section I Chapter VII) requires `\"a temperature throughout the
+      meat of not more than 3 °C for offal and 7 °C for other meat along a
+      chilling curve that ensures a continuous decrease\"`, and cutting/boning
+      (Section I Chapter V) requires the meat `\"maintained at not more than
+      3 °C for offal and 7 °C for other meat, by means of an ambient
+      temperature of not more than 12 °C\"`. Poultry/lagomorphs (Section II
+      Chapter IV) must be `\"chilled to not more than 4 °C as soon as
+      possible\"`. NOTE: in the EUR-Lex HTML the degree symbol is markup
+      (`3<span>o</span>C`), so a tag-stripped read renders these as `3oC`;
+      the figures are 3, 7, 12 and 4 degrees Celsius.
+    - US: 9 CFR 381.66 `\"Temperatures and chilling and freezing procedures\"`,
+      fetched as the official CFR XML from govinfo.gov (GPO) and re-grepped in
+      the raw XML. Verbatim: 381.66(b)(1)(i) requires poultry be chilled
+      immediately after slaughter so that there is `\"no outgrowth of
+      pathogens\"`; 381.66(f)(1) requires `\"fresh frozen\"`-style product be
+      `\"placed into a freezer within 48 hours after initial chilling\"` and, if
+      not immediately frozen, `\"held at 36 °F. or lower\"`; 381.66(f)(2)
+      requires the `\"internal temperature of the birds at the center of the
+      package to 0 °F. or below within 72 hours from the time of entering the
+      freezer\"`; 381.66(f)(4) requires warm packaged ready-to-cook poultry
+      `\"within 2 hours from time of slaughter\"` be placed in a plate freezer
+      `\"where a temperature of −10 °F. or lower is maintained\"`.
+    - JP: 食品、添加物等の規格基準（生食用食肉の目 — 平成23年厚生労働省告示第321号
+      による追加）, fetched as the mhlw.go.jp-hosted 告示 text and read verbatim.
+      保存基準 3(1): 「生食用食肉は，４゜以下で保存しなければならない。ただし，生食用
+      食肉を凍結させたものにあつては，これを−15゜以下で保存しなければならない。」
+      加工基準 2(4): 表面温度が「10゜を超えることのないように」, 2(7): 「深さ１cm以上の
+      部分までを60゜で２分間以上加熱」後「速やかに４゜以下に冷却」, 2(2): 器具は
+      「83゜以上の温湯」で洗浄消毒, 1(2)/2(8): 記録は「１年間保存」。
+
+  SAFETY-MONOTONE RECONCILIATION. The pre-citation values in this table were
+  unsourced. Where a verified statute is STRICTER than the value that was
+  here, the value is tightened (JP 5.0 -> 4.0 degC, per 保存基準 3(1)). Where a
+  statute is LOOSER, the stricter operative limit is DELIBERATELY KEPT and the
+  statutory figure recorded separately in `:statutory-limits` -- research is
+  never used to relax a food-safety gate. Concretely: EU keeps an operative
+  3.0 degC (equal to the Annex III offal ceiling) rather than being loosened
+  to the 7.0 degC carcase ceiling.
+
+  SCOPE HONESTY. `:cold-chain-max-temp-c` is advisory reference data: no
+  code path in this actor reads it today (the Governor gates on the
+  per-product-type `:cold-chain-temp-max-c` in `product-types` below). It is
+  cited here so the number stops being an unsourced assertion, not to imply
+  it is an enforced limit. Three jurisdictions are covered; a jurisdiction
+  absent from this table has NO spec basis and must not be guessed at."
+  ;; clojure.set is required explicitly: `required-evidence-satisfied?` calls
+  ;; `set/subset?`, which only happened to resolve on the JVM (where
+  ;; clojure.set is already loaded) and would fail in a ClojureScript build of
+  ;; this .cljc. Pre-existing latent portability bug, fixed 2026-07-25.
+  (:require [clojure.set :as set]
+            [clojure.string :as str]))
 
 (def jurisdictions
   "Meat processing jurisdictions and their required documentation/evidence
-  checklist requirements."
+  checklist requirements, each carrying the verified primary-source citation
+  it rests on (see this namespace's docstring for the fetch provenance)."
   {"US"
    {:id "US"
     :name "United States (FSIS/USDA)"
     :cold-chain-max-temp-c 4.0
     :holding-time-max-hours 24
+    :legal-basis "9 CFR 381.66 (Temperatures and chilling and freezing procedures) -- performance-based chilling: (b)(1)(i) requires chilling immediately after slaughter so that there is no outgrowth of pathogens, rather than a single numeric carcass ceiling"
+    :provenance "https://www.govinfo.gov/content/pkg/CFR-2024-title9-vol2/xml/CFR-2024-title9-vol2-sec381-66.xml"
+    :statutory-limits
+    {:chilling-rule :performance-based-no-pathogen-outgrowth ;; 381.66(b)(1)(i)
+     :fresh-frozen-holding-max-temp-f 36.0                   ;; 381.66(f)(1)
+     :fresh-frozen-freezer-placement-max-hours 48            ;; 381.66(f)(1)
+     :frozen-core-target-temp-f 0.0                          ;; 381.66(f)(2)
+     :frozen-core-target-within-hours 72                     ;; 381.66(f)(2)
+     :warm-packaged-plate-freezer-max-temp-f -10.0           ;; 381.66(f)(4)
+     :warm-packaged-plate-freezer-within-hours 2}            ;; 381.66(f)(4)
     :required-evidence
     [:batch-assay           ;; source animal health/age/provenance
      :temperature-log       ;; cold-chain temperature records
@@ -25,8 +96,21 @@
    "JP"
    {:id "JP"
     :name "日本 (MHLW/厚生労働省)"
-    :cold-chain-max-temp-c 5.0
+    ;; Tightened 5.0 -> 4.0 on 2026-07-25: 保存基準 3(1) is 4゜以下 and the
+    ;; previous 5.0 was an unsourced value LOOSER than the 告示.
+    :cold-chain-max-temp-c 4.0
     :holding-time-max-hours 24
+    :legal-basis "食品、添加物等の規格基準（生食用食肉の目 — 平成23年厚生労働省告示第321号による追加）保存基準3(1)「生食用食肉は，４゜以下で保存しなければならない」／加工基準2(4)(7)"
+    :provenance "https://www.mhlw.go.jp/topics/syokuchu/dl/110927_02.pdf"
+    :statutory-limits
+    {:storage-max-temp-c 4.0                    ;; 保存基準 3(1)
+     :frozen-storage-max-temp-c -15.0           ;; 保存基準 3(1) ただし書き
+     :processing-surface-max-temp-c 10.0        ;; 加工基準 2(4)
+     :pasteurization-temp-c 60.0                ;; 加工基準 2(7)
+     :pasteurization-min-minutes 2              ;; 加工基準 2(7)
+     :pasteurization-min-depth-cm 1             ;; 加工基準 2(7)
+     :utensil-sanitize-min-temp-c 83.0          ;; 加工基準 2(2)
+     :record-retention-years 1}                 ;; 成分規格 1(2) / 加工基準 2(8)
     :required-evidence
     [:batch-assay
      :temperature-log
@@ -37,9 +121,18 @@
 
    "EU"
    {:id "EU"
-    :name "European Union (EFSA)"
+    :name "European Union (Regulation (EC) No 853/2004)"
+    ;; Kept at 3.0 (= the Annex III offal ceiling) rather than loosened to the
+    ;; 7.0 carcase ceiling -- see SAFETY-MONOTONE RECONCILIATION above.
     :cold-chain-max-temp-c 3.0
     :holding-time-max-hours 24
+    :legal-basis "Regulation (EC) No 853/2004, Annex III — Section I Chapter VII (post-mortem chilling to \"a temperature throughout the meat of not more than 3 °C for offal and 7 °C for other meat\"), Section I Chapter V (cutting/boning maintained at the same 3 °C / 7 °C, ambient not more than 12 °C), Section II Chapter IV (poultry/lagomorphs \"chilled to not more than 4 °C as soon as possible\")"
+    :provenance "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32004R0853"
+    :statutory-limits
+    {:carcase-max-temp-c 7.0            ;; "7 °C for other meat", Annex III Section I Ch. VII
+     :offal-max-temp-c 3.0              ;; "3 °C for offal", Annex III Section I Ch. VII
+     :cutting-ambient-max-temp-c 12.0   ;; Annex III Section I Ch. V
+     :poultry-max-temp-c 4.0}           ;; Annex III Section II Ch. IV
     :required-evidence
     [:batch-assay
      :temperature-log
@@ -52,6 +145,45 @@
 (defn jurisdiction-by-id [id]
   (get jurisdictions id))
 
+(defn spec-basis
+  "The verified primary-source citation for `jurisdiction-id`: a map of
+  `:legal-basis` / `:provenance` / `:statutory-limits`, or nil when the
+  jurisdiction is unknown. Never synthesizes a citation for a jurisdiction
+  that is not in the table."
+  [jurisdiction-id]
+  (when-let [j (jurisdiction-by-id jurisdiction-id)]
+    (select-keys j [:legal-basis :provenance :statutory-limits])))
+
+(defn cited?
+  "True only when `jurisdiction-id` carries BOTH a non-blank `:legal-basis`
+  and a `:provenance` that is a real absolute http(s) URL. A jurisdiction
+  entry with a legal-basis but no fetchable source does not count as cited."
+  [jurisdiction-id]
+  (let [{:keys [legal-basis provenance]} (spec-basis jurisdiction-id)]
+    (boolean (and (string? legal-basis)
+                  (not (str/blank? legal-basis))
+                  (string? provenance)
+                  (str/starts-with? provenance "http")))))
+
+(defn citation-coverage
+  "Honest citation coverage across the jurisdiction table: which jurisdictions
+  rest on a verified primary source and which do not. A jurisdiction absent
+  from `jurisdictions` is reported as missing, not as n/a."
+  ([] (citation-coverage (keys jurisdictions)))
+  ([jurisdiction-ids]
+   (let [known (filter jurisdiction-by-id jurisdiction-ids)
+         cited (filter cited? known)]
+     {:requested (count jurisdiction-ids)
+      :known (count known)
+      :cited (count cited)
+      :cited-jurisdictions (vec (sort cited))
+      :uncited-jurisdictions (vec (sort (remove cited? known)))
+      :unknown-jurisdictions (vec (sort (remove jurisdiction-by-id jurisdiction-ids)))
+      :note (str "cloud-itonami-isic-1010: " (count cited) "/" (count jurisdictions)
+                 " jurisdictions carry a directly-fetched primary-source citation. "
+                 "Extend `meatprocessing.facts/jurisdictions` from a real fetched "
+                 "source; never fabricate a legal-basis or provenance URL.")})))
+
 (defn required-evidence-satisfied?
   "Verify that all required-evidence items are present in the batch's
   checklist. Returns true only if every item in the jurisdiction's
@@ -62,7 +194,7 @@
       false
       (let [required (set (:required-evidence j))
             present (set checklist)]
-        (clojure.set/subset? required present)))))
+        (set/subset? required present)))))
 
 (def product-types
   "Valid meat product categories and their required processing parameters."
