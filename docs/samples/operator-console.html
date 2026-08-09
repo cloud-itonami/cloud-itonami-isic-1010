@@ -1,0 +1,58 @@
+<html><head><meta charset="utf-8"><title>cloud-itonami-isic-1010 &middot; meat processing</title><style>body{font:14px/1.5 -apple-system,system-ui,sans-serif;margin:0;color:#1a1a1a;background:#f5f5f5}.bar{background:#4a1510;color:#fff;padding:1.2rem 2rem}.bar h1{margin:0;font-size:1.15rem;font-weight:600}.badge{display:inline-block;margin-top:.4rem;font-size:.75rem;opacity:.8}main{max-width:980px;margin:1.5rem auto;padding:0 1rem}.card{background:#fff;border-radius:8px;padding:1.2rem 1.4rem;margin-bottom:1.2rem;box-shadow:0 1px 3px rgba(0,0,0,.08)}.card h2{margin-top:0;font-size:1rem}.muted{color:#777;font-size:.82rem}table{border-collapse:collapse;width:100%;font-size:.85rem}th,td{text-align:left;padding:.42rem .5rem;border-bottom:1px solid #eee}th{font-weight:600;color:#555}.ok{color:#0a7d33}.warn{color:#9a6700}.critical{color:#b41010;font-weight:600}code{background:#f0f0f0;padding:.1rem .3rem;border-radius:3px;font-size:.8rem}</style></head><body>
+<header class="bar">
+  <h1>Meat processing (ISIC 1010) — Operator Console</h1>
+  <span class="badge">read-only sample · governor-gated · production / shipment actuation always human-approved</span>
+</header>
+<main>
+  <section class="card">
+    <h2>Processing batches</h2>
+    <p class="muted">Demo snapshot — build-time-generated from <code>meatprocessing.store</code> via <code>meatprocessing.render-html</code> (<code>clojure -M:render-html</code>). Drives the real advisor → governor → phase stack. No invented usage or revenue metrics.</p>
+    <table>
+      <thead><tr><th>Batch</th><th>Product</th><th>Jurisdiction</th><th>Temp °C</th><th>Hold h</th><th>Sanitation</th><th>Last op status</th></tr></thead>
+      <tbody>
+        <tr><td>batch-001</td><td>fresh-beef</td><td>US</td><td>3.5</td><td>18</td><td>85</td><td><span class="warn">awaiting approval &middot; actuation</span></td></tr>
+        <tr><td>batch-hot</td><td>fresh-beef</td><td>US</td><td>5.5</td><td>18</td><td>85</td><td><span class="critical">HARD hold &middot; batch-temp-out-of-range</span></td></tr>
+        <tr><td>batch-contam</td><td>fresh-beef</td><td>US</td><td>3.5</td><td>18</td><td>85</td><td><span class="critical">HARD hold &middot; contamination-flag-unresolved</span></td></tr>
+        <tr><td>batch-holdtime</td><td>fresh-beef</td><td>US</td><td>3.5</td><td>30</td><td>85</td><td><span class="critical">HARD hold &middot; holding-time-exceeded</span></td></tr>
+        <tr><td>batch-sani</td><td>fresh-beef</td><td>US</td><td>3.5</td><td>18</td><td>70</td><td><span class="critical">HARD hold &middot; sanitation-score-insufficient</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Action gate (Meat Processing Governor)</h2>
+    <p class="muted">HARD holds cannot be overridden. Cold-chain window, holding-time, sanitation floor, metal-detector pass, contamination-flag resolution and jurisdiction evidence checklist are checked against each batch's own record; production logging and shipment always escalate for plant-manager sign-off.</p>
+    <table>
+      <thead><tr><th>Op</th><th>Gate</th></tr></thead>
+      <tbody>
+        <tr><td><code>:schedule-maintenance</code></td><td><span class="ok">auto-commit when clean (routine)</span></td></tr>
+        <tr><td><code>:flag-food-safety-concern</code></td><td><span class="ok">auto-commit when clean (monitoring; concern itself is recorded)</span></td></tr>
+        <tr><td><code>:log-production-batch</code></td><td><span class="warn">ALWAYS human approval (high-stakes actuation) · cold-chain / holding-time / sanitation / metal-detector / contamination / evidence HARD-checked</span></td></tr>
+        <tr><td><code>:coordinate-shipment</code></td><td><span class="warn">ALWAYS human approval (high-stakes) · already-finalized + optional handoff well-formedness HARD-checked</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Audit ledger (this run)</h2>
+    <p class="muted">Append-only decision-fact log — every advisor proposal, hold, escalation and commit this scenario produced.</p>
+    <table>
+      <thead><tr><th>Fact</th><th>Op</th><th>Subject</th><th>Basis</th></tr></thead>
+      <tbody>
+        <tr><td>advisor-proposal</td><td><code>schedule-maintenance</code></td><td>batch-001</td><td>conf=0.9 · Metal detector due for scheduled calibration</td></tr>
+        <tr><td>committed</td><td><code>schedule-maintenance</code></td><td>batch-001</td><td>Equipment-Manual-MD-2024</td></tr>
+        <tr><td>advisor-proposal</td><td><code>flag-food-safety-concern</code></td><td>batch-001</td><td>conf=0.65 · Detected potential temperature excursion; escalating for sensory eval</td></tr>
+        <tr><td>committed</td><td><code>flag-food-safety-concern</code></td><td>batch-001</td><td>FSIS-Critical-Control-Points</td></tr>
+        <tr><td>advisor-proposal</td><td><code>log-production-batch</code></td><td>batch-001</td><td>conf=0.85 · Batch intake and evidence checklist verified; ready for production logging</td></tr>
+        <tr><td>approval-requested</td><td><code>log-production-batch</code></td><td>batch-001</td><td>actuation</td></tr>
+        <tr><td>advisor-proposal</td><td><code>log-production-batch</code></td><td>batch-hot</td><td>conf=0.85 · Batch intake and evidence checklist verified; ready for production logging</td></tr>
+        <tr><td>governor-hold</td><td><code>log-production-batch</code></td><td>batch-hot</td><td>batch-temp-out-of-range</td></tr>
+        <tr><td>advisor-proposal</td><td><code>log-production-batch</code></td><td>batch-contam</td><td>conf=0.85 · Batch intake and evidence checklist verified; ready for production logging</td></tr>
+        <tr><td>governor-hold</td><td><code>log-production-batch</code></td><td>batch-contam</td><td>contamination-flag-unresolved</td></tr>
+        <tr><td>advisor-proposal</td><td><code>log-production-batch</code></td><td>batch-holdtime</td><td>conf=0.85 · Batch intake and evidence checklist verified; ready for production logging</td></tr>
+        <tr><td>governor-hold</td><td><code>log-production-batch</code></td><td>batch-holdtime</td><td>holding-time-exceeded</td></tr>
+        <tr><td>advisor-proposal</td><td><code>log-production-batch</code></td><td>batch-sani</td><td>conf=0.85 · Batch intake and evidence checklist verified; ready for production logging</td></tr>
+        <tr><td>governor-hold</td><td><code>log-production-batch</code></td><td>batch-sani</td><td>sanitation-score-insufficient</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+</body></html>
