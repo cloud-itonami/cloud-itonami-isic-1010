@@ -64,7 +64,7 @@
   ;; clojure.set is already loaded) and would fail in a ClojureScript build of
   ;; this .cljc. Pre-existing latent portability bug, fixed 2026-07-25.
   (:require [clojure.set :as set]
-            [clojure.string :as str]))
+            [kotoba.lang.text :as str]))
 
 (def jurisdictions
   "Meat processing jurisdictions and their required documentation/evidence
