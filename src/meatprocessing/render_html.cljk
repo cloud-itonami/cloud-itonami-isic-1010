@@ -14,7 +14,7 @@
   audit facts that `run-operation` actually returned. Byte-identical
   across reruns against the same seed (no timestamps in page content).
 
-  Usage: `clojure -M:render-html [out-file]`
+  Usage: `kbb -M:render-html [out-file]`
   (default `docs/samples/operator-console.html`)."
   (:require [kotoba.lang.text :as str]
             [meatprocessing.operation :as op]
@@ -219,7 +219,7 @@
      "<main>\n"
      "  <section class=\"card\">\n"
      "    <h2>Processing batches</h2>\n"
-     "    <p class=\"muted\">Demo snapshot — build-time-generated from <code>meatprocessing.store</code> via <code>meatprocessing.render-html</code> (<code>clojure -M:render-html</code>). Drives the real advisor → governor → phase stack. No invented usage or revenue metrics.</p>\n"
+     "    <p class=\"muted\">Demo snapshot — build-time-generated from <code>meatprocessing.store</code> via <code>meatprocessing.render-html</code> (<code>kbb -M:render-html</code>). Drives the real advisor → governor → phase stack. No invented usage or revenue metrics.</p>\n"
      "    <table>\n"
      "      <thead><tr><th>Batch</th><th>Product</th><th>Jurisdiction</th><th>Temp °C</th><th>Hold h</th><th>Sanitation</th><th>Last op status</th></tr></thead>\n"
      "      <tbody>\n"
