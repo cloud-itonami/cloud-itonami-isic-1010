@@ -26,9 +26,9 @@
          {:local/root "../../kotoba-lang/langchain"}
         io.github.kotoba-lang/langgraph
         {:local/root "../../kotoba-lang/langgraph"}}}
-  ;; clojure -M:dev:run  -> drive the demo through one OperationActor
+  ;; kbb -M:dev:run  -> drive the demo through one OperationActor
   :run {:main-opts ["-m" "meatprocessing.sim"]}
-  ;; clojure -M:render-html -> regenerate docs/samples/operator-console.html
+  ;; kbb -M:render-html -> regenerate docs/samples/operator-console.html
   ;; through the REAL run-operation stack (no langgraph required; this
   ;; vertical's operation.cljc is the documented stub path).
   :render-html {:main-opts ["-m" "meatprocessing.render-html"]}

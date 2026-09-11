@@ -20,7 +20,7 @@ cd cloud-itonami-isic-1010
 ## 2. Run tests
 
 ```bash
-clojure -M:test
+kbb -M:test
 ```
 
 Expect green if maturity is `blueprint`. Fix failures before operating.
