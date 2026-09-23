@@ -1,5 +1,5 @@
 (ns meatprocessing.governor-test
-  (:require [clojure.test :refer [deftest is are testing]]
+  (:require [kotoba.test :refer [deftest is are testing]]
             [meatprocessing.governor :as governor]
             [meatprocessing.store :as store]
             [meatprocessing.facts :as facts]))

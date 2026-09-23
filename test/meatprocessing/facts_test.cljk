@@ -1,5 +1,5 @@
 (ns meatprocessing.facts-test
-  (:require [clojure.test :refer [deftest is are testing]]
+  (:require [kotoba.test :refer [deftest is are testing]]
             [meatprocessing.facts :as facts]))
 
 (deftest jurisdiction-lookup
