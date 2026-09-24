@@ -19,7 +19,7 @@
     - :contamination-flag-resolved? true only if concern is verified cleared
     - :processed? true once processing operation committed
     - :shipment-finalized? true once shipment operation committed"
-  (:require [clojure.set]))
+  (:require [kotoba.lang.coll]))
 
 ;; Protocol for swappable store implementations
 (defprotocol Store
