@@ -1,0 +1,32 @@
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isic-1010"
+ :cases
+ [{:id :carcass-chill
+   :kind :thermal
+   :procedure "carcass side hangs in the forced-air chiller for 24 h; the deep-muscle core must come down from body temperature"
+   :params {:conductivity-w-mk 0.45 :density-kg-m3 1060.0 :specific-heat-j-kgk 3500.0
+            :t0-c 38.0 :t-hot-c 0.0 :h-front-w-m2k 20.0 :h-back-w-m2k 0.0 :t-back-ambient-c 0.0
+            :threshold-c 7.0 :duration-s 86400.0 :nodes 21}
+   :sweep {:param :thickness-m :values [0.04 0.06 0.08 0.10 0.12]}
+   :quantity :final-back-c
+   :limit {:max 7.0 :basis "Regulation (EC) No 853/2004, Annex III, Section I, Chapter VII: after post-mortem inspection meat must be chilled to not more than 7 C (offal 3 C); here applied to the core after 24 h"}
+   :boundary {:lo 0.02 :hi 0.30}}
+  {:id :primal-cut-lift
+   :kind :manipulator
+   :procedure "boning-room arm lifts a primal cut from the cutting table onto the packing conveyor"
+   :params {:l1-m 0.60 :l2-m 0.55 :m1-kg 8.0 :m2-kg 6.0
+            :from [0.70 0.0] :to [0.25 0.60] :duration-s 2.0 :steps 400}
+   :sweep {:param :payload-kg :values [5.0 10.0 15.0 20.0 25.0]}
+   :quantity :peak-tau1-nm
+   :limit {:max 250.0 :basis "estimate: continuous shoulder torque of a washdown-rated ~25 kg food-handling arm"}
+   :boundary {:lo 1.0 :hi 80.0}}
+  {:id :crate-to-chiller
+   :kind :transport
+   :procedure "AMR carries a stack of meat crates from the packing line into the chiller"
+   :params {:mass-kg 300.0 :distance-m 40.0 :v-max-mps 1.2 :a-max-mps2 0.5 :brake-decel-mps2 0.8
+            :drive-force-n 350.0 :crr 0.015 :cog-height-m 0.40 :payload-cog-height-m 0.9
+            :support-half-length-m 0.40 :max-time-s 3000.0}
+   :sweep {:param :payload-kg :values [50.0 100.0 200.0 300.0 400.0]}
+   :quantity :cycle-time-s
+   :limit {:max 45.0 :basis "estimate: one packing-line-to-chiller leg per crate stack keeps the cold-chain door-open time short"}
+   :boundary {:lo 10.0 :hi 3000.0}}]}
